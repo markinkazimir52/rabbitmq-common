@@ -2,6 +2,8 @@
 
 DIST_DIR = plugins
 
+# MIX = "echo y | mix"
+
 dist_verbose_0 = @echo " DIST  " $@;
 dist_verbose_2 = set -x;
 dist_verbose = $(dist_verbose_$(V))
@@ -20,6 +22,11 @@ $(shell awk '
 	print vsn;
 	exit;
 }' $(1))
+endef
+
+define get_mix_project_version
+$(shell echo "1.0")
+# $(shell echo "GET MIX VERSION FOR $(1)" && cd $(1) && MIX run -e "IO.puts(Mix.Project.config[:version])")
 endef
 
 # Define the target to create an .ez plugin archive. This macro is
@@ -53,8 +60,27 @@ $$(dist_$(1)_ez): $$(patsubst %,$(3)/%, \
 endif
 
 DIST_EZS += $$(dist_$(1)_ez)
+ERLANG_DIST_EZS += $$(dist_$(1)_ez)
 
 endef
+
+#   $(call do_mix_ez_target,app_name,app_version,app_dir)
+
+define do_mix_ez_target
+dist_$(1)_ez_dir = $(DIST_DIR)/$(1)-$(2) # $$(if $(2),$(DIST_DIR)/$(1)-$(2),$(DIST_DIR)/$(1))
+dist_$(1)_ez = $$(dist_$(1)_ez_dir).ez
+
+$$(dist_$(1)_ez): APP     = $(1)
+$$(dist_$(1)_ez): VSN     = $(2)
+$$(dist_$(1)_ez): SRC_DIR = $(3)
+$$(dist_$(1)_ez): EZ_DIR  = $$(abspath $$(dist_$(1)_ez_dir))
+$$(dist_$(1)_ez): EZ      = $$(dist_$(1)_ez)
+
+DIST_EZS += $$(dist_$(1)_ez)
+MIX_DIST_EZS += $$(dist_$(1)_ez)
+
+endef
+
 
 # Real entry point: it tests the existence of an .app file to determine
 # if it is an Erlang application (and therefore if it should be provided
@@ -70,9 +96,14 @@ dist_$(1)_appdir = $$(if $$(filter $(PROJECT),$(1)), \
 			      $(APPS_DIR)/$(1), \
 			      $(DEPS_DIR)/$(1)))
 dist_$(1)_appfile = $$(dist_$(1)_appdir)/ebin/$(1).app
+dist_$(1)_mixfile = $$(dist_$(1)_appdir)/mix.exs
 
 $$(if $$(shell test -f $$(dist_$(1)_appfile) && echo OK), \
-  $$(eval $$(call do_ez_target,$(1),$$(call get_app_version,$$(dist_$(1)_appfile)),$$(dist_$(1)_appdir))))
+  $$(eval $$(call do_ez_target,$(1),$$(call get_app_version,$$(dist_$(1)_appfile)),$$(dist_$(1)_appdir))), \
+  $$(if $$(shell test -f $$(dist_$(1)_mixfile) && echo OK), \
+  	$$(eval $$(call do_mix_ez_target,$(1),$$(call get_mix_project_version,$$(dist_$(1)_appdir)),$$(dist_$(1)_appdir)))))
+
+
 
 endef
 
@@ -108,7 +139,8 @@ ZIP_V_0 = -q
 ZIP_V_1 =
 ZIP_V = $(ZIP_V_$(V))
 
-$(DIST_DIR)/%.ez:
+
+$(ERLANG_DIST_EZS):
 	$(verbose) rm -rf $(EZ_DIR) $(EZ)
 	$(verbose) mkdir -p $(EZ_DIR)
 	$(dist_verbose) $(RSYNC) -a $(RSYNC_V) \
@@ -123,8 +155,13 @@ $(DIST_DIR)/%.ez:
 		&& grep -q '^prepare-dist::' $(SRC_DIR)/Makefile) || \
 		$(MAKE) --no-print-directory -C $(SRC_DIR) prepare-dist \
 		APP=$(APP) VSN=$(VSN) EZ_DIR=$(EZ_DIR)
-	$(verbose) (cd $(DIST_DIR) && $(ZIP) $(ZIP_V) -r $*.ez $*)
+	$(verbose) (cd $(DIST_DIR) && $(ZIP) $(ZIP_V) -r `basename $(EZ)` `basename $(EZ) .ez`)
 	$(verbose) rm -rf $(EZ_DIR)
+
+$(MIX_DIST_EZS):
+	$(verbose) rm -rf $(DIST_DIR)/tmp
+	$(verbose) mkdir $(DIST_DIR)/tmp
+	$(verbose) cd $(SRC_DIR) && MIX archive.build.all -e -o $(realpath $(DIST_DIR))/tmp
 
 # We need to recurse because the top-level make instance is evaluated
 # before dependencies are downloaded.
@@ -132,14 +169,17 @@ $(DIST_DIR)/%.ez:
 MAYBE_APPS_LIST = $(if $(shell test -f $(ERLANG_MK_TMP)/apps.log && echo OK),$(ERLANG_MK_TMP)/apps.log)
 
 dist:: $(ERLANG_MK_RECURSIVE_DEPS_LIST) all
+	$(gen_verbose) rm -rf $(DIST_DIR)/*.ez
 	$(gen_verbose) $(MAKE) do-dist DIST_PLUGINS_LIST="$(ERLANG_MK_RECURSIVE_DEPS_LIST) $(MAYBE_APPS_LIST)"
 
 test-dist:: $(ERLANG_MK_RECURSIVE_TEST_DEPS_LIST) test-build
 	$(gen_verbose) $(MAKE) do-dist DIST_PLUGINS_LIST="$(ERLANG_MK_RECURSIVE_TEST_DEPS_LIST) $(MAYBE_APPS_LIST)"
 
 do-dist:: $(DIST_EZS)
-	$(verbose) unwanted='$(filter-out $(DIST_EZS),$(wildcard $(DIST_DIR)/*.ez))'; \
+	$(verbose) unwanted='$(filter-out $(foreach archive,$(wildcard $(DIST_DIR)/*.ez),$(DIST_DIR)/$(notdir $(archive))),$(filter-out $(DIST_EZS),$(wildcard $(DIST_DIR)/*.ez)))'; \
 	test -z "$$unwanted" || (echo " RM     $$unwanted" && rm -f $$unwanted)
+	$(verbose) mv $(DIST_DIR)/tmp/*.ez $(DIST_DIR)
+	$(verbose) rm -rf $(DIST_DIR)/tmp
 
 clean-dist::
 	$(gen_verbose) rm -rf $(DIST_DIR)
