@@ -35,8 +35,7 @@ $(shell awk '
 endef
 
 define get_mix_project_version
-$(shell echo "1.0")
-# $(shell echo "GET MIX VERSION FOR $(1)" && cd $(1) && MIX run -e "IO.puts(Mix.Project.config[:version])")
+$(shell cd $(1) && MIX run -e "IO.puts(Mix.Project.config[:version])")
 endef
 
 # Define the target to create an .ez plugin archive. This macro is
@@ -78,7 +77,7 @@ endef
 
 define do_mix_ez_target
 
-dist_$(1)_ez_dir = $(DIST_DIR)/$(1)-$(2) # $$(if $(2),$(DIST_DIR)/$(1)-$(2),$(DIST_DIR)/$(1))
+dist_$(1)_ez_dir = $(DIST_DIR)/$(1)-$(2)
 dist_$(1)_ez = $$(dist_$(1)_ez_dir).ez
 
 $$(dist_$(1)_ez): APP     = $(1)
