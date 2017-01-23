@@ -8,6 +8,13 @@ dist_verbose_0 = @echo " DIST  " $@;
 dist_verbose_2 = set -x;
 dist_verbose = $(dist_verbose_$(V))
 
+MIX_ARCHIVES ?= $(realpath ~/.mix/archives)
+mix_task_archive_deps_installed = $(lastword $(wildcard $(MIX_ARCHIVES)/mix_task_archive_deps-*))
+
+ifeq (,$(mix_task_archive_deps_installed))
+mix_task_archive_deps_installed = $(MIX_ARCHIVES)/mix_task_archive_deps-0.1.0
+endif
+
 # We take the version of an Erlang application from the .app file. This
 # macro is called like this:
 #
@@ -67,6 +74,7 @@ endef
 #   $(call do_mix_ez_target,app_name,app_version,app_dir)
 
 define do_mix_ez_target
+
 dist_$(1)_ez_dir = $(DIST_DIR)/$(1)-$(2) # $$(if $(2),$(DIST_DIR)/$(1)-$(2),$(DIST_DIR)/$(1))
 dist_$(1)_ez = $$(dist_$(1)_ez_dir).ez
 
@@ -100,10 +108,8 @@ dist_$(1)_mixfile = $$(dist_$(1)_appdir)/mix.exs
 
 $$(if $$(shell test -f $$(dist_$(1)_appfile) && echo OK), \
   $$(eval $$(call do_ez_target,$(1),$$(call get_app_version,$$(dist_$(1)_appfile)),$$(dist_$(1)_appdir))), \
-  $$(if $$(shell test -f $$(dist_$(1)_mixfile) && echo OK), \
+  $$(if $$(shell test -f $$(dist_$(1)_mixfile) && [ "x$(1)" != "xrabbitmqctl" ] && [ "x$(1)" != "xrabbitmq_cli" ] && echo OK), \
   	$$(eval $$(call do_mix_ez_target,$(1),$$(call get_mix_project_version,$$(dist_$(1)_appdir)),$$(dist_$(1)_appdir)))))
-
-
 
 endef
 
@@ -158,10 +164,13 @@ $(ERLANG_DIST_EZS):
 	$(verbose) (cd $(DIST_DIR) && $(ZIP) $(ZIP_V) -r `basename $(EZ)` `basename $(EZ) .ez`)
 	$(verbose) rm -rf $(EZ_DIR)
 
-$(MIX_DIST_EZS):
+$(MIX_DIST_EZS): $(mix_task_archive_deps_installed)
 	$(verbose) rm -rf $(DIST_DIR)/tmp
 	$(verbose) mkdir $(DIST_DIR)/tmp
-	$(verbose) cd $(SRC_DIR) && MIX archive.build.all -e -o $(realpath $(DIST_DIR))/tmp
+	$(verbose) cd $(SRC_DIR) && MIX do deps.get, deps.compile, compile, archive.build.all -e -o $(realpath $(DIST_DIR))/tmp
+
+$(mix_task_archive_deps_installed):
+	mix archive.install --force https://github.com/hairyhum/mix_task_archive_deps/releases/download/0.1.0/mix_task_archive_deps-0.1.0.ez
 
 # We need to recurse because the top-level make instance is evaluated
 # before dependencies are downloaded.
