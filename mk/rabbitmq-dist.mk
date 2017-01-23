@@ -8,7 +8,10 @@ dist_verbose_0 = @echo " DIST  " $@;
 dist_verbose_2 = set -x;
 dist_verbose = $(dist_verbose_$(V))
 
-MIX_ARCHIVES ?= $(realpath ~/.mix/archives)
+ifeq ($(MIX_ARCHIVES),)
+MIX_ARCHIVES = $(wildcard ~/.mix/archives)
+endif
+
 mix_task_archive_deps_installed = $(lastword $(wildcard $(MIX_ARCHIVES)/mix_task_archive_deps-*))
 
 ifeq (,$(mix_task_archive_deps_installed))
