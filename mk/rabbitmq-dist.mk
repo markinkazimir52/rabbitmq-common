@@ -179,14 +179,13 @@ $(mix_task_archive_deps_installed):
 MAYBE_APPS_LIST = $(if $(shell test -f $(ERLANG_MK_TMP)/apps.log && echo OK),$(ERLANG_MK_TMP)/apps.log)
 
 dist:: $(ERLANG_MK_RECURSIVE_DEPS_LIST) all
-	$(gen_verbose) $(MAKE) do-dist DIST_PLUGINS_LIST="$(ERLANG_MK_RECURSIVE_DEPS_LIST) $(MAYBE_APPS_LIST)"
+	$(gen_verbose) rm -f $(DIST_DIR)/*.ez
+	$(verbose) $(MAKE) do-dist DIST_PLUGINS_LIST="$(ERLANG_MK_RECURSIVE_DEPS_LIST) $(MAYBE_APPS_LIST)"
 
 test-dist:: $(ERLANG_MK_RECURSIVE_TEST_DEPS_LIST) test-build
 	$(gen_verbose) $(MAKE) do-dist DIST_PLUGINS_LIST="$(ERLANG_MK_RECURSIVE_TEST_DEPS_LIST) $(MAYBE_APPS_LIST)"
 
 do-dist:: $(DIST_EZS)
-	$(verbose) unwanted='$(filter-out $(foreach archive,$(wildcard $(DIST_DIR)/*.ez),$(DIST_DIR)/$(notdir $(archive))),$(filter-out $(DIST_EZS),$(wildcard $(DIST_DIR)/*.ez)))'; \
-	test -z "$$unwanted" || (echo " RM     $$unwanted" && rm -f $$unwanted)
 	- $(verbose) mv $(DIST_DIR)/tmp/*.ez $(DIST_DIR)
 	- $(verbose) rm -rf $(DIST_DIR)/tmp
 
