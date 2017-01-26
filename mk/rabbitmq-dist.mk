@@ -2,7 +2,7 @@
 
 DIST_DIR = plugins
 
-# MIX = "echo y | mix"
+MIX = echo y | mix
 
 dist_verbose_0 = @echo " DIST  " $@;
 dist_verbose_2 = set -x;
@@ -35,7 +35,7 @@ $(shell awk '
 endef
 
 define get_mix_project_version
-$(shell cd $(1) && MIX run -e "IO.puts(Mix.Project.config[:version])")
+$(shell cd $(1) && $(MIX) run -e "IO.puts(Mix.Project.config[:version])")
 endef
 
 # Define the target to create an .ez plugin archive. This macro is
@@ -169,7 +169,7 @@ $(ERLANG_DIST_EZS):
 $(MIX_DIST_EZS): $(mix_task_archive_deps_installed)
 	$(verbose) rm -rf $(DIST_DIR)/tmp
 	$(verbose) mkdir $(DIST_DIR)/tmp
-	$(verbose) cd $(SRC_DIR) && MIX do deps.get, deps.compile, compile, archive.build.all -e -o $(realpath $(DIST_DIR))/tmp
+	$(verbose) cd $(SRC_DIR) && $(MIX) do deps.get, deps.compile, compile, archive.build.all -e -o $(realpath $(DIST_DIR))/tmp
 
 $(mix_task_archive_deps_installed):
 	mix archive.install --force https://github.com/hairyhum/mix_task_archive_deps/releases/download/0.1.0/mix_task_archive_deps-0.1.0.ez
