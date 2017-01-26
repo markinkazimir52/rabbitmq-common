@@ -91,7 +91,6 @@ MIX_DIST_EZS += $$(dist_$(1)_ez)
 
 endef
 
-
 # Real entry point: it tests the existence of an .app file to determine
 # if it is an Erlang application (and therefore if it should be provided
 # as an .ez plugin archive). Then, if calls do_ez_target. It should be
@@ -163,7 +162,7 @@ $(ERLANG_DIST_EZS):
 		&& grep -q '^prepare-dist::' $(SRC_DIR)/Makefile) || \
 		$(MAKE) --no-print-directory -C $(SRC_DIR) prepare-dist \
 		APP=$(APP) VSN=$(VSN) EZ_DIR=$(EZ_DIR)
-	$(verbose) (cd $(DIST_DIR) && $(ZIP) $(ZIP_V) -r `basename $(EZ)` `basename $(EZ) .ez`)
+	$(verbose) (cd $(DIST_DIR) && $(ZIP) $(ZIP_V) -r $(notdir $(EZ)) $(notdir $(EZ_DIR)))
 	$(verbose) rm -rf $(EZ_DIR)
 
 $(MIX_DIST_EZS): $(mix_task_archive_deps_installed)
@@ -180,7 +179,6 @@ $(mix_task_archive_deps_installed):
 MAYBE_APPS_LIST = $(if $(shell test -f $(ERLANG_MK_TMP)/apps.log && echo OK),$(ERLANG_MK_TMP)/apps.log)
 
 dist:: $(ERLANG_MK_RECURSIVE_DEPS_LIST) all
-	$(gen_verbose) rm -rf $(DIST_DIR)/*.ez
 	$(gen_verbose) $(MAKE) do-dist DIST_PLUGINS_LIST="$(ERLANG_MK_RECURSIVE_DEPS_LIST) $(MAYBE_APPS_LIST)"
 
 test-dist:: $(ERLANG_MK_RECURSIVE_TEST_DEPS_LIST) test-build
