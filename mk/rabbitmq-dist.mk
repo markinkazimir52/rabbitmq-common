@@ -189,8 +189,8 @@ test-dist:: $(ERLANG_MK_RECURSIVE_TEST_DEPS_LIST) test-build
 do-dist:: $(DIST_EZS)
 	$(verbose) unwanted='$(filter-out $(foreach archive,$(wildcard $(DIST_DIR)/*.ez),$(DIST_DIR)/$(notdir $(archive))),$(filter-out $(DIST_EZS),$(wildcard $(DIST_DIR)/*.ez)))'; \
 	test -z "$$unwanted" || (echo " RM     $$unwanted" && rm -f $$unwanted)
-	$(verbose) mv $(DIST_DIR)/tmp/*.ez $(DIST_DIR)
-	$(verbose) rm -rf $(DIST_DIR)/tmp
+	- $(verbose) mv $(DIST_DIR)/tmp/*.ez $(DIST_DIR)
+	- $(verbose) rm -rf $(DIST_DIR)/tmp
 
 clean-dist::
 	$(gen_verbose) rm -rf $(DIST_DIR)
